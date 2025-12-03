@@ -5,7 +5,7 @@ A command‑line utility to measure audio sync offsets between two MKV files. It
 ## Features
 - 🎵 Audio extraction: Uses ffmpeg to pull raw PCM samples directly from MKV audio tracks.
 - ⚡ Fast correlation: Defaults to FFT‑based cross‑correlation for speed.
-- 🧮 Direct correlation option: More precise but slower; runs in a separate worker process so you can interrupt safely.
+- 🧮 Direct correlation option: More precise but slower.
 - ⏱ Runtime reporting: Displays the exact runtime of both MKV files (hh:mm:ss.mmm).
 - 🎬 FPS reporting: Displays the frames per second of the primary video stream in both files.
 - 📌 Version reporting: `--version` option shows the current tool version.
