@@ -17,7 +17,9 @@ A command‑line utility to measure audio sync offsets between two MKV files. It
 - FFmpeg installed and available in your PATH
 
 ## Usage
-`./sync_offset.py original.mkv async.mkv [lang1] [lang2] [duration_seconds] [start_seconds] [method]`
+```bash
+./sync_offset.py original.mkv async.mkv [lang1] [lang2] [duration_seconds] [start_seconds] [method]
+```
 
 Arguments:
 - `original.mkv` — reference file
@@ -28,21 +30,34 @@ Arguments:
 - `start_seconds` — offset into the file to start slice (default: 0)
 - `method` — correlation method: fft (default) or direct
 
+Options:
+- `--version` — display the tool’s version string
+
 ## Examples
 Run FFT correlation on a 120‑second slice from the start, English vs English (default):
-`./sync_offset.py movie1.mkv movie2.mkv`
+```bash
+./sync_offset.py movie1.mkv movie2.mkv
+```
 
 Analyze a German audio track against an English one for 90 s:
-`./sync_offset.py movie1.mkv movie2.mkv deu eng 90`
+```bash
+./sync_offset.py movie1.mkv movie2.mkv deu eng 90
+```
 
 Run FFT correlation on a long 300‑second slice starting at 600 s:
-`./sync_offset.py movie1.mkv movie2.mkv eng eng 300 600 fft`
+```bash
+./sync_offset.py movie1.mkv movie2.mkv eng eng 300 600 fft
+```
 
 Compare 10‑second slices starting at 320 s using direct correlation:
-`./sync_offset.py movie1.mkv movie2.mkv eng eng 10 320 direct`
+```bash
+./sync_offset.py movie1.mkv movie2.mkv eng eng 10 320 direct
+```
 
 Show version:
-`./sync_offset.py --version`
+```bash
+./sync_offset.py --version
+```
 
 ## Output
 - Runtime (original): hh:mm:ss.mmm | FPS: xx.xxx fps
@@ -72,3 +87,6 @@ Show version:
 - FFmpeg errors: Ensure ffmpeg and ffprobe are installed and accessible in your PATH.
 - Negative offsets: A negative offset means the async file is ahead of the original.
 - Performance: Direct mode is O(n²). For slices longer than ~30 s, prefer FFT mode.
+
+## License
+MIT License
