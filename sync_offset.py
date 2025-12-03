@@ -54,6 +54,38 @@ def extract_pcm_to_array(mkvfile, track_index, sr=48000, duration=120, start=0):
     print(f"Extracted {len(data)} samples from {mkvfile}")
     return data
 
+def get_runtime(mkvfile):
+    cmd = [
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        mkvfile
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    seconds = float(result.stdout.strip())
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int((seconds - int(seconds)) * 1000)
+    return f"{hours:02}:{minutes:02}:{secs:02}.{millis:03}"
+
+def get_fps(mkvfile):
+    cmd = [
+        "ffprobe", "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=r_frame_rate",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        mkvfile
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    rate = result.stdout.strip()
+    if "/" in rate:
+        num, denom = rate.split("/")
+        fps = float(num) / float(denom)
+    else:
+        fps = float(rate)
+    return f"{fps:.3f} fps"
+
 def _direct_worker(sig1, sig2, sr, out_queue):
     corr = correlate(sig1, sig2, mode="full", method="direct")
     lag = np.argmax(corr) - (len(sig2) - 1)
@@ -128,6 +160,15 @@ def main():
 
         orig_data = extract_pcm_to_array(sys.argv[1], orig_index, sr, duration, start)
         async_data = extract_pcm_to_array(sys.argv[2], async_index, sr, duration, start)
+
+        # New runtime + FPS reporting
+        orig_runtime = get_runtime(sys.argv[1])
+        async_runtime = get_runtime(sys.argv[2])
+        orig_fps = get_fps(sys.argv[1])
+        async_fps = get_fps(sys.argv[2])
+
+        print(f"Runtime (original): {orig_runtime} | FPS: {orig_fps}")
+        print(f"Runtime (async):    {async_runtime} | FPS: {async_fps}")
 
         offset_ms, peak_corr = compute_offset(orig_data, async_data, sr, method, duration)
         print(f"Best alignment offset: {offset_ms:.2f} ms")
