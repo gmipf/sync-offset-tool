@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import subprocess
 import numpy as np
-import sys
 import json
 import signal
 import multiprocessing as mp
 from scipy.signal import correlate
+import argparse
+import sys
+
+__version__ = "1.1.1"   # keep version at 1.1.1
 
 # --- Styling helpers ---
 def warn_line(message):
@@ -14,11 +17,9 @@ def warn_line(message):
 def error_line(message):
     return f"\033[91m❌ {message}\033[0m"
 
-# Global to hold worker process reference
 _worker_proc = None
 
 def _install_sigint_handler():
-    """Install SIGINT handler that terminates worker if present."""
     def _handle_sigint(sig, frame):
         global _worker_proc
         if _worker_proc is not None and _worker_proc.is_alive():
@@ -140,41 +141,47 @@ def compute_offset(sig1, sig2, sr, method="fft", duration=120):
         peak_corr = corr[np.argmax(corr)] / len(sig1)
         return delay_ms, peak_corr
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Measure audio sync offsets between two MKV files")
+    parser.add_argument("original", help="Reference MKV file")
+    parser.add_argument("async_file", help="File suspected of being out of sync")
+    parser.add_argument("lang1", nargs="?", default="eng", help="Language code for original track (default: eng)")
+    parser.add_argument("lang2", nargs="?", default="eng", help="Language code for async track (default: eng)")
+    parser.add_argument("duration", nargs="?", type=int, default=120, help="Slice length to analyze in seconds (default: 120)")
+    parser.add_argument("start", nargs="?", type=int, default=0, help="Offset into the file to start slice (default: 0)")
+    parser.add_argument("method", nargs="?", choices=["fft", "direct"], default="fft", help="Correlation method (default: fft)")
+    return parser.parse_args()
+
 def main():
     _install_sigint_handler()
 
-    if len(sys.argv) < 3:
-        print("Usage: sync_offset.py original.mkv async.mkv [lang1] [lang2] [duration_seconds] [start_seconds] [method]")
-        sys.exit(1)
+    # Handle --version manually before argparse
+    if "--version" in sys.argv:
+        print(f"sync_offset.py {__version__}")
+        return
 
+    args = parse_args()
     sr = 48000
-    lang1 = sys.argv[3] if len(sys.argv) > 3 else "eng"
-    lang2 = sys.argv[4] if len(sys.argv) > 4 else "eng"
-    duration = int(sys.argv[5]) if len(sys.argv) > 5 else 120
-    start = int(sys.argv[6]) if len(sys.argv) > 6 else 0
-    method = sys.argv[7] if len(sys.argv) > 7 else "fft"
 
     try:
-        orig_index = get_track_index(sys.argv[1], lang1)
-        async_index = get_track_index(sys.argv[2], lang2)
+        orig_index = get_track_index(args.original, args.lang1)
+        async_index = get_track_index(args.async_file, args.lang2)
 
-        orig_data = extract_pcm_to_array(sys.argv[1], orig_index, sr, duration, start)
-        async_data = extract_pcm_to_array(sys.argv[2], async_index, sr, duration, start)
+        orig_data = extract_pcm_to_array(args.original, orig_index, sr, args.duration, args.start)
+        async_data = extract_pcm_to_array(args.async_file, async_index, sr, args.duration, args.start)
 
-        # New runtime + FPS reporting
-        orig_runtime = get_runtime(sys.argv[1])
-        async_runtime = get_runtime(sys.argv[2])
-        orig_fps = get_fps(sys.argv[1])
-        async_fps = get_fps(sys.argv[2])
+        orig_runtime = get_runtime(args.original)
+        async_runtime = get_runtime(args.async_file)
+        orig_fps = get_fps(args.original)
+        async_fps = get_fps(args.async_file)
 
         print(f"Runtime (original): {orig_runtime} | FPS: {orig_fps}")
         print(f"Runtime (async):    {async_runtime} | FPS: {async_fps}")
 
-        offset_ms, peak_corr = compute_offset(orig_data, async_data, sr, method, duration)
+        offset_ms, peak_corr = compute_offset(orig_data, async_data, sr, args.method, args.duration)
         print(f"Best alignment offset: {offset_ms:.2f} ms")
         print(f"Peak correlation strength: {peak_corr:.4f}")
     except KeyboardInterrupt:
-        # Already handled inside compute_offset
         pass
 
 if __name__ == "__main__":

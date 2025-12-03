@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2025-12-03
+### Added
+- `--version` option to display the tool’s version string.
+
+### Removed
+- `--test` and `--debug` options for simplicity.
+
+---
+
 ## [1.1.0] - 2025-12-03
 ### Added
 - Runtime reporting for both MKV files (formatted as hh:mm:ss.mmm).

@@ -8,6 +8,7 @@ A command‑line utility to measure audio sync offsets between two MKV files. It
 - 🧮 Direct correlation option: More precise but slower; runs in a separate worker process so you can interrupt safely.
 - ⏱ Runtime reporting: Displays the exact runtime of both MKV files (hh:mm:ss.mmm).
 - 🎬 FPS reporting: Displays the frames per second of the primary video stream in both files.
+- 📌 Version reporting: `--version` option shows the current tool version.
 
 ## Requirements
 - Python 3.8+
@@ -39,6 +40,9 @@ Run FFT correlation on a long 300‑second slice starting at 600 s:
 
 Compare 10‑second slices starting at 320 s using direct correlation:
 `./sync_offset.py movie1.mkv movie2.mkv eng eng 10 320 direct`
+
+Show version:
+`./sync_offset.py --version`
 
 ## Output
 - Runtime (original): hh:mm:ss.mmm | FPS: xx.xxx fps
