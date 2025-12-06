@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2025-12-06
+### Added
+- Detection and reporting of MKV container audio track delays (`start_time` metadata).
+- Output now includes both raw correlation offset and effective offset (including container delays).
+- Clear reporting of container delay values for both original and async tracks.
+- Clear error messages when requested language tags are not found in MKV files.
+
+---
+
 ## [1.1.1] - 2025-12-03
 ### Added
 - `--version` option to display the tool’s version string.

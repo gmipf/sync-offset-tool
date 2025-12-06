@@ -8,7 +8,7 @@ from scipy.signal import correlate
 import argparse
 import sys
 
-__version__ = "1.1.1"   # keep version at 1.1.1
+__version__ = "1.2.0"   # patched version
 
 # --- Styling helpers ---
 def warn_line(message):
@@ -86,6 +86,20 @@ def get_fps(mkvfile):
     else:
         fps = float(rate)
     return f"{fps:.3f} fps"
+
+def get_container_delay(mkvfile, lang="eng"):
+    cmd = [
+        "ffprobe", "-v", "error",
+        "-select_streams", f"a:m:language:{lang}",
+        "-show_entries", "stream=start_time",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        mkvfile
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    val = result.stdout.strip()
+    if val:
+        return float(val) * 1000.0
+    return 0.0
 
 def _direct_worker(sig1, sig2, sr, out_queue):
     corr = correlate(sig1, sig2, mode="full", method="direct")
@@ -178,11 +192,25 @@ def main():
         print(f"Runtime (original): {orig_runtime} | FPS: {orig_fps}")
         print(f"Runtime (async):    {async_runtime} | FPS: {async_fps}")
 
+        orig_delay_ms = get_container_delay(args.original, args.lang1)
+        async_delay_ms = get_container_delay(args.async_file, args.lang2)
+
+        print(f"Container delay (original track): {orig_delay_ms:.2f} ms")
+        print(f"Container delay (async track):    {async_delay_ms:.2f} ms")
+
         offset_ms, peak_corr = compute_offset(orig_data, async_data, sr, args.method, args.duration)
-        print(f"Best alignment offset: {offset_ms:.2f} ms")
+        print(f"Best alignment offset (raw): {offset_ms:.2f} ms")
         print(f"Peak correlation strength: {peak_corr:.4f}")
+
+        effective_offset_ms = offset_ms + (async_delay_ms - orig_delay_ms)
+        print(f"Effective offset (including container delays): {effective_offset_ms:.2f} ms")
+
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        import traceback
+        print(error_line(f"Unexpected error: {e}"))
+        traceback.print_exc()
 
 if __name__ == "__main__":
     try:
@@ -190,3 +218,4 @@ if __name__ == "__main__":
     except RuntimeError:
         pass
     main()
+

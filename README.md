@@ -1,6 +1,7 @@
 # Sync Offset Tool
 
 A command‑line utility to measure audio sync offsets between two MKV files. It extracts audio tracks, cross‑correlates them, and reports the best alignment offset in milliseconds.
+As of v1.2.0, the tool also detects and reports **MKV container audio delays** and calculates the **effective offset** including those delays.
 
 ## Features
 - 🎵 Audio extraction: Uses ffmpeg to pull raw PCM samples directly from MKV audio tracks.
@@ -8,6 +9,8 @@ A command‑line utility to measure audio sync offsets between two MKV files. It
 - 🧮 Direct correlation option: More precise but slower.
 - ⏱ Runtime reporting: Displays the exact runtime of both MKV files (hh:mm:ss.mmm).
 - 🎬 FPS reporting: Displays the frames per second of the primary video stream in both files.
+- ⏳ Container delay detection: Reports per‑track MKV audio delay metadata (start_time).
+- 📐 Effective offset reporting: Combines raw correlation offset with container delays for a net sync difference.
 - 📌 Version reporting: `--version` option shows the current tool version.
 
 ## Requirements
@@ -62,9 +65,11 @@ Show version:
 ## Output
 - Runtime (original): hh:mm:ss.mmm | FPS: xx.xxx fps
 - Runtime (async):    hh:mm:ss.mmm | FPS: xx.xxx fps
-- Best alignment offset: Reported in milliseconds. Positive means the async file lags behind the original.
+- Container delay (original track): Reported in milliseconds.
+- Container delay (async track): Reported in milliseconds.
+- Best alignment offset (raw): Correlation‑based offset in milliseconds.
 - Peak correlation strength: Value between 0 and 1 indicating match quality.
-  Higher values mean a stronger match and therefore better confidence in the measured offset.
+- Effective offset (including container delays): Net sync difference after accounting for MKV metadata delays.
 
 ### Interpreting correlation strength
 - **> 0.80** → Excellent match, high confidence in the offset measurement
@@ -81,12 +86,14 @@ Show version:
 - Use Direct mode only for short slices or when you need maximum precision.
 - The script will refuse to run direct mode on slices >60 s without confirmation.
 - On interruption, the worker process is terminated immediately — no orphan processes left behind.
+- Container delays are reported directly from MKV metadata and may explain sync differences even before correlation.
 
 ## Troubleshooting
 - No audio track found: Check the language codes (eng, deu, fra, etc.) with ffprobe.
 - FFmpeg errors: Ensure ffmpeg and ffprobe are installed and accessible in your PATH.
 - Negative offsets: A negative offset means the async file is ahead of the original.
 - Performance: Direct mode is O(n²). For slices longer than ~30 s, prefer FFT mode.
+- Effective offset mismatch: If raw offset and container delays differ, the MKV metadata may already compensate for sync.
 
 ## License
 MIT License
