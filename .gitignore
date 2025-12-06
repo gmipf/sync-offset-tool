@@ -64,3 +64,11 @@ coverage.xml
 # MacOS / Linux / Windows system files
 .DS_Store
 Thumbs.db
+
+# Packaging metadata
+*.tar.gz
+*.whl
+
+# Local Python environment
+.venv/
+
