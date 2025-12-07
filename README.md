@@ -71,6 +71,31 @@ Show version:
 - Peak correlation strength: Value between 0 and 1 indicating match quality.
 - Effective offset (including container delays): Net sync difference after accounting for MKV metadata delays.
 
+### Delay Detection
+
+The tool detects and reports **four flavours of MKV container audio delay**:
+
+1. **Stream `start_time`** — audio begins at non‑zero time.
+2. **`codec_delay`** — encoder padding (AAC, Opus).
+3. **Tags** — `delay_relative_to_video` or `delay`.
+4. **Packet timestamp offsets** — first audio packet shifted relative to video (`first_packet_pts`).
+
+## Example Output
+
+When comparing English vs. Turkish tracks in a remuxed MKV:
+```
+Container delay (original track): 0.00 ms
+Container delay (async track) [first_packet_pts]: 9260.00 ms
+Best alignment offset (raw): 9261.08 ms
+Peak correlation strength: 0.0358
+Effective offset (including container delays): 1.08 ms
+```
+
+This shows:
+- The Turkish track starts 9260 ms later (detected via first packet PTS).
+- Raw waveform correlation also found ~9261 ms.
+- Effective offset collapses to ~1 ms after subtracting the container delay.
+
 ### Interpreting correlation strength
 - **> 0.80** → Excellent match, high confidence in the offset measurement
 - **0.50 – 0.80** → Moderate match, offset is usable but less certain

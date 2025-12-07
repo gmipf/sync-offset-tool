@@ -8,7 +8,7 @@ from scipy.signal import correlate
 import argparse
 import sys
 
-__version__ = "1.2.1"   # Fix effective offset calculation
+__version__ = "1.3.0"   # Extended container delay detection
 
 # --- Styling helpers ---
 def warn_line(message):
@@ -87,18 +87,65 @@ def get_fps(mkvfile):
         fps = float(rate)
     return f"{fps:.3f} fps"
 
-def get_container_delay(mkvfile, lang="eng"):
+# --- Helper: get first packet PTS ---
+def get_first_packet_pts(mkvfile, stream_selector):
     cmd = [
         "ffprobe", "-v", "error",
-        "-select_streams", f"a:m:language:{lang}",
-        "-show_entries", "stream=start_time",
+        "-select_streams", stream_selector,
+        "-show_entries", "packet=pts_time",
+        "-read_intervals", "%+#1",
         "-of", "default=noprint_wrappers=1:nokey=1",
         mkvfile
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     val = result.stdout.strip()
-    if val:
-        return float(val) * 1000.0
+    try:
+        return float(val)
+    except ValueError:
+        return 0.0
+
+# --- Enhanced container delay reporting ---
+def report_container_delays(mkvfile, lang, label):
+    cmd = [
+        "ffprobe", "-v", "error",
+        "-select_streams", f"a:m:language:{lang}",
+        "-show_entries",
+        "stream=start_time:stream=codec_delay:stream_tags=delay_relative_to_video",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        mkvfile
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    vals = [v.strip() for v in result.stdout.splitlines() if v.strip()]
+
+    keys = ["start_time", "codec_delay", "delay_relative_to_video"]
+    nonzero = {}
+    for i, v in enumerate(vals):
+        try:
+            num = float(v)
+            if num != 0.0:
+                nonzero[keys[i]] = num * 1000.0
+        except ValueError:
+            continue
+
+    if nonzero:
+        for k, v in nonzero.items():
+            print(f"Container delay ({label} track) [{k}]: {v:.2f} ms")
+        if "delay_relative_to_video" in nonzero:
+            return nonzero["delay_relative_to_video"]
+        elif "start_time" in nonzero:
+            return nonzero["start_time"]
+        elif "codec_delay" in nonzero:
+            return nonzero["codec_delay"]
+
+    # --- Fallback: check first packet PTS vs video ---
+    audio_pts = get_first_packet_pts(mkvfile, f"a:m:language:{lang}")
+    video_pts = get_first_packet_pts(mkvfile, "v:0")
+    offset_ms = (audio_pts - video_pts) * 1000.0
+    if abs(offset_ms) > 0.0:
+        print(f"Container delay ({label} track) [first_packet_pts]: {offset_ms:.2f} ms")
+        return offset_ms
+
+    print(f"Container delay ({label} track): 0.00 ms")
     return 0.0
 
 def _direct_worker(sig1, sig2, sr, out_queue):
@@ -192,11 +239,8 @@ def main():
         print(f"Runtime (original): {orig_runtime} | FPS: {orig_fps}")
         print(f"Runtime (async):    {async_runtime} | FPS: {async_fps}")
 
-        orig_delay_ms = get_container_delay(args.original, args.lang1)
-        async_delay_ms = get_container_delay(args.async_file, args.lang2)
-
-        print(f"Container delay (original track): {orig_delay_ms:.2f} ms")
-        print(f"Container delay (async track):    {async_delay_ms:.2f} ms")
+        orig_delay_ms = report_container_delays(args.original, args.lang1, "original")
+        async_delay_ms = report_container_delays(args.async_file, args.lang2, "async")
 
         offset_ms, peak_corr = compute_offset(orig_data, async_data, sr, args.method, args.duration)
         print(f"Best alignment offset (raw): {offset_ms:.2f} ms")
