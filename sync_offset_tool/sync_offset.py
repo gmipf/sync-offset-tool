@@ -8,7 +8,7 @@ from scipy.signal import correlate
 import argparse
 import sys
 
-__version__ = "1.2.0"   # patched version
+__version__ = "1.2.1"   # Fix effective offset calculation
 
 # --- Styling helpers ---
 def warn_line(message):
@@ -202,7 +202,7 @@ def main():
         print(f"Best alignment offset (raw): {offset_ms:.2f} ms")
         print(f"Peak correlation strength: {peak_corr:.4f}")
 
-        effective_offset_ms = offset_ms + (async_delay_ms - orig_delay_ms)
+        effective_offset_ms = offset_ms - async_delay_ms + orig_delay_ms
         print(f"Effective offset (including container delays): {effective_offset_ms:.2f} ms")
 
     except KeyboardInterrupt:

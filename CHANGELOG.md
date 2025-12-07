@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2025-12-07
+### Fixed
+- Corrected effective offset calculation: now uses `raw_offset - async_delay + orig_delay` instead of adding delays.
+
 ## [1.2.0] - 2025-12-06
 ### Added
 - Detection and reporting of MKV container audio track delays (`start_time` metadata).
